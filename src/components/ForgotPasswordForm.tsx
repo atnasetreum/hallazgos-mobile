@@ -65,7 +65,7 @@ export const ForgotPasswordForm = ({ setForgotPassword }: Props) => {
       <Button
         mode="text"
         onPress={() => setForgotPassword(false)}
-        textColor="#1976d2"
+        textColor="#4b8f2e"
       >
         Volver al login
       </Button>

@@ -94,7 +94,7 @@ export const LoginForm = ({ setForgotPassword, onLoginSuccess }: Props) => {
       </Button>
 
       <TouchableOpacity onPress={() => setForgotPassword(true)}>
-        <Button compact mode="text" textColor="#1976d2">
+        <Button compact mode="text" textColor="#4b8f2e">
           ¿Has olvidado tu contraseña?
         </Button>
       </TouchableOpacity>

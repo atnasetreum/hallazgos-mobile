@@ -6,11 +6,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import {
   MD3LightTheme as DefaultTheme,
   PaperProvider,
@@ -21,7 +21,7 @@ import { appConfig } from "./src/constants/app";
 import { AuthService } from "./src/services/auth.service";
 import { notify } from "./src/utils";
 import { AuthScreen } from "./src/screens/AuthScreen";
-import { DashboardScreen } from "./src/screens/DashboardScreen";
+import { HallazgosScreen } from "./src/screens/HallazgosScreen";
 
 export default function App() {
   const [forgotPassword, setForgotPassword] = useState(false);
@@ -31,9 +31,13 @@ export default function App() {
   const theme = useMemo(
     () => ({
       ...DefaultTheme,
+      roundness: 10,
       colors: {
         ...DefaultTheme.colors,
-        primary: "#1976d2",
+        primary: "#71BF44",
+        secondary: "#9c27b0",
+        background: "#f3f4f6",
+        surface: "#ffffff",
       },
     }),
     [],
@@ -70,42 +74,49 @@ export default function App() {
   };
 
   return (
-    <PaperProvider theme={theme}>
-      <StatusBar style="dark" />
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+        <StatusBar style="dark" />
+        <SafeAreaView
+          style={styles.safeArea}
+          edges={["top", "left", "right", "bottom"]}
         >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.container}>
-              {!isReady ? (
-                <ActivityIndicator size="large" color="#1976d2" />
-              ) : isAuthenticated ? (
-                <DashboardScreen onLogout={handleLogout} />
-              ) : (
-                <AuthScreen
-                  forgotPassword={forgotPassword}
-                  setForgotPassword={setForgotPassword}
-                  onLoginSuccess={() => setIsAuthenticated(true)}
-                />
-              )}
+          {!isReady ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color="#71BF44" />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-      <Toast />
-    </PaperProvider>
+          ) : isAuthenticated ? (
+            <HallazgosScreen onLogout={handleLogout} />
+          ) : (
+            <KeyboardAvoidingView
+              style={styles.flex}
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+            >
+              <ScrollView
+                contentContainerStyle={styles.scroll}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.container}>
+                  <AuthScreen
+                    forgotPassword={forgotPassword}
+                    setForgotPassword={setForgotPassword}
+                    onLoginSuccess={() => setIsAuthenticated(true)}
+                  />
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          )}
+        </SafeAreaView>
+        <Toast />
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f3f4f6",
   },
   flex: {
     flex: 1,
@@ -121,5 +132,10 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     alignSelf: "center",
     alignItems: "center",
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
