@@ -594,7 +594,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
         <Chip style={styles.kpiChip} textStyle={styles.kpiText}>
           Total: {countEvidence}
         </Chip>
-        <Chip
+        {/* <Chip
           style={[styles.kpiChip, styles.kpiOpen]}
           textStyle={styles.kpiText}
         >
@@ -605,7 +605,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           textStyle={styles.kpiText}
         >
           Cerrados: {rowStats.closed}
-        </Chip>
+        </Chip> */}
         {rowStats.other > 0 && (
           <Chip
             style={[styles.kpiChip, styles.kpiOther]}
