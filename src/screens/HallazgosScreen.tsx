@@ -570,7 +570,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
         <IconButton icon="logout" onPress={onLogout} />
       </View>
 
-      <View style={styles.actionsRow}>
+      <View style={styles.headerActionsRow}>
         <Button
           mode="contained"
           icon="plus"
@@ -605,7 +605,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           textStyle={styles.kpiText}
         >
           Cerrados: {rowStats.closed}
-        </Chip> */}
+        </Chip> 
         {rowStats.other > 0 && (
           <Chip
             style={[styles.kpiChip, styles.kpiOther]}
@@ -613,7 +613,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           >
             Otros: {rowStats.other}
           </Chip>
-        )}
+        )}*/}
       </View>
 
       <Surface style={styles.filtersContainer} elevation={1}>
@@ -1430,6 +1430,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  headerActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   kpiRow: {
     flexDirection: "row",
