@@ -115,11 +115,23 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
   const [createSupervisorId, setCreateSupervisorId] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createImageUri, setCreateImageUri] = useState("");
+  const [createValidationMessage, setCreateValidationMessage] = useState("");
 
   const [closeVisible, setCloseVisible] = useState(false);
   const [evidenceToClose, setEvidenceToClose] = useState<Evidence | null>(null);
   const [closeImageUri, setCloseImageUri] = useState("");
   const [closeDescriptionSolution, setCloseDescriptionSolution] = useState("");
+  const [closeValidationMessage, setCloseValidationMessage] = useState("");
+  const [commentValidationMessage, setCommentValidationMessage] = useState("");
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const [confirmDialogTitle, setConfirmDialogTitle] = useState("");
+  const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
+  const [confirmDialogAction, setConfirmDialogAction] = useState<
+    (() => void | Promise<void>) | null
+  >(null);
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+  const [imagePreviewUri, setImagePreviewUri] = useState("");
+  const [imagePreviewLabel, setImagePreviewLabel] = useState("");
 
   const secondaryTypes = useMemo(() => {
     if (!filters.mainTypeId) {
@@ -304,6 +316,45 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
       .map((key) => labels[key]);
   }, [filters]);
 
+  const confirmAction = (
+    title: string,
+    message: string,
+    onConfirm: () => void | Promise<void>,
+  ) => {
+    setConfirmDialogTitle(title);
+    setConfirmDialogMessage(message);
+    setConfirmDialogAction(() => onConfirm);
+    setConfirmDialogVisible(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialogVisible(false);
+    setConfirmDialogTitle("");
+    setConfirmDialogMessage("");
+    setConfirmDialogAction(null);
+  };
+
+  const handleConfirmDialog = () => {
+    const action = confirmDialogAction;
+    closeConfirmDialog();
+
+    if (action) {
+      void action();
+    }
+  };
+
+  const openImagePreview = (uri: string, label: string) => {
+    setImagePreviewUri(uri);
+    setImagePreviewLabel(label);
+    setImagePreviewVisible(true);
+  };
+
+  const closeImagePreview = () => {
+    setImagePreviewVisible(false);
+    setImagePreviewUri("");
+    setImagePreviewLabel("");
+  };
+
   const handleChangeFilter = (key: keyof FiltersEvidences, value: string) => {
     setPage(1);
 
@@ -359,12 +410,13 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     const comment = newComment.trim();
 
     if (!comment) {
-      notify("El comentario es requerido");
+      setCommentValidationMessage("El comentario es requerido");
       return;
     }
 
     try {
       setIsSavingComment(true);
+      setCommentValidationMessage("");
       await EvidencesService.addComment(selectedEvidence.id, comment);
       setNewComment("");
       notify("Comentario agregado correctamente", true);
@@ -375,6 +427,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
   };
 
   const openCreate = () => {
+    setCreateValidationMessage("");
     setCreateVisible(true);
   };
 
@@ -387,6 +440,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     setCreateSupervisorId("");
     setCreateDescription("");
     setCreateImageUri("");
+    setCreateValidationMessage("");
 
     if (userSession?.manufacturingPlants.length !== 1) {
       setCreatePlantId("");
@@ -394,6 +448,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
   };
 
   const openCloseEvidence = (row: Evidence) => {
+    setCloseValidationMessage("");
     setEvidenceToClose(row);
     setCloseVisible(true);
   };
@@ -403,6 +458,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     setEvidenceToClose(null);
     setCloseImageUri("");
     setCloseDescriptionSolution("");
+    setCloseValidationMessage("");
   };
 
   const pickImage = async (fromCamera: boolean) => {
@@ -411,7 +467,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      notify("Se requiere permiso para usar imágenes");
+      setCreateValidationMessage("Se requiere permiso para usar imágenes");
       return;
     }
 
@@ -430,6 +486,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     if (!response.canceled && response.assets.length) {
       setCreateImageUri(response.assets[0].uri);
       setShouldScrollCreateToEnd(true);
+      setCreateValidationMessage("");
     }
   };
 
@@ -439,7 +496,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      notify("Se requiere permiso para usar imágenes");
+      setCloseValidationMessage("Se requiere permiso para usar imágenes");
       return;
     }
 
@@ -458,6 +515,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     if (!response.canceled && response.assets.length) {
       setCloseImageUri(response.assets[0].uri);
       setShouldScrollCloseToEnd(true);
+      setCloseValidationMessage("");
     }
   };
 
@@ -465,27 +523,28 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     const descriptionClean = createDescription.trim();
 
     if (!createPlantId || !createMainTypeId || !createSecondaryTypeId) {
-      notify("Complete planta, hallazgo y tipo");
+      setCreateValidationMessage("Complete planta, hallazgo y tipo");
       return;
     }
 
     if (!createZoneId || !createProcessId) {
-      notify("Complete zona y proceso");
+      setCreateValidationMessage("Complete zona y proceso");
       return;
     }
 
     if (!descriptionClean) {
-      notify("La descripción es requerida");
+      setCreateValidationMessage("La descripción es requerida");
       return;
     }
 
     if (!isUnsafeBehavior && !createImageUri) {
-      notify("La imagen del hallazgo es requerida");
+      setCreateValidationMessage("La imagen del hallazgo es requerida");
       return;
     }
 
     try {
       setIsSavingCreate(true);
+      setCreateValidationMessage("");
 
       await EvidencesService.create(
         {
@@ -516,17 +575,18 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
     const descriptionClean = closeDescriptionSolution.trim();
 
     if (isUnsafeBehaviorClose && !descriptionClean) {
-      notify("La descripción de la solución es requerida");
+      setCloseValidationMessage("La descripción de la solución es requerida");
       return;
     }
 
     if (!isUnsafeBehaviorClose && !closeImageUri) {
-      notify("La imagen de solución es requerida");
+      setCloseValidationMessage("La imagen de solución es requerida");
       return;
     }
 
     try {
       setIsSavingClose(true);
+      setCloseValidationMessage("");
 
       await EvidencesService.solution(
         evidenceToClose.id,
@@ -559,7 +619,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
       ]}
     >
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerAccent} />
+        <View style={styles.headerTextWrap}>
           <Text variant="headlineSmall" style={styles.title}>
             Hallazgos
           </Text>
@@ -581,10 +642,11 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           Crear
         </Button>
         <Button
-          mode="outlined"
+          mode="contained"
           icon="refresh"
           onPress={fetchRows}
-          textColor="#4b8f2e"
+          buttonColor="#71BF44"
+          textColor="#ffffff"
         >
           Actualizar
         </Button>
@@ -867,9 +929,12 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
             return (
               <Card style={styles.card}>
-                <Card.Content>
+                <Card.Content style={styles.cardContent}>
+                  <View style={styles.cardTopAccent} />
                   <View style={styles.rowBetween}>
-                    <Text variant="titleMedium">#{item.id}</Text>
+                    <Text variant="titleMedium" style={styles.cardIdText}>
+                      #{item.id}
+                    </Text>
                     <Chip
                       textStyle={styles.chipText}
                       style={{
@@ -891,9 +956,9 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                       <Text style={styles.metaLabel}>Grupo</Text>
                       <Text style={styles.metaValue}>{item.mainType.name}</Text>
                     </View>
-                    <View style={styles.metaItem}>
+                    <View style={styles.metaItemWide}>
                       <Text style={styles.metaLabel}>Tipo</Text>
-                      <Text style={styles.metaValue}>
+                      <Text style={styles.metaValueStrong}>
                         {item.secondaryType.name}
                       </Text>
                     </View>
@@ -929,11 +994,21 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                     )}
                   </View>
 
+                  {!!item.description && (
+                    <View style={styles.descriptionBlock}>
+                      <Text style={styles.metaLabel}>Descripción</Text>
+                      <Text style={styles.descriptionValue} numberOfLines={3}>
+                        {item.description}
+                      </Text>
+                    </View>
+                  )}
+
                   <View style={styles.cardActions}>
                     <Button
                       mode="contained"
-                      buttonColor="#9c27b0"
+                      buttonColor="#71BF44"
                       textColor="#ffffff"
+                      style={styles.cardActionButton}
                       onPress={() => setSelectedEvidence(item)}
                     >
                       Detalles
@@ -943,6 +1018,7 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                         mode="contained"
                         buttonColor="#ed6c02"
                         textColor="#ffffff"
+                        style={styles.cardActionButton}
                         onPress={() => openCloseEvidence(item)}
                       >
                         Cerrar hallazgo
@@ -952,7 +1028,14 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                       <Button
                         mode="contained"
                         buttonColor="#d32f2f"
-                        onPress={() => handleCancelEvidence(item)}
+                        style={styles.cardActionButtonFull}
+                        onPress={() =>
+                          confirmAction(
+                            "Cancelar hallazgo",
+                            "Esta accion cancelara el hallazgo. Deseas continuar?",
+                            () => handleCancelEvidence(item),
+                          )
+                        }
                       >
                         Cancelar
                       </Button>
@@ -970,16 +1053,20 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           ListFooterComponent={
             <View style={styles.pagination}>
               <Button
+                mode="contained"
                 disabled={page <= 1}
-                textColor="#4b8f2e"
+                buttonColor="#71BF44"
+                textColor="#ffffff"
                 onPress={() => setPage((prev) => Math.max(1, prev - 1))}
               >
                 Anterior
               </Button>
               <Text>Página {page}</Text>
               <Button
+                mode="contained"
                 disabled={!canGoNext}
-                textColor="#4b8f2e"
+                buttonColor="#71BF44"
+                textColor="#ffffff"
                 onPress={() => setPage((prev) => prev + 1)}
               >
                 Siguiente
@@ -988,6 +1075,41 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           }
         />
       )}
+
+      <Modal
+        visible={confirmDialogVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeConfirmDialog}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text variant="titleMedium" style={styles.confirmTitle}>
+              {confirmDialogTitle}
+            </Text>
+            <Text style={styles.confirmMessage}>{confirmDialogMessage}</Text>
+
+            <View style={styles.confirmActions}>
+              <Button
+                mode="text"
+                textColor="#6b7280"
+                onPress={closeConfirmDialog}
+              >
+                Cancelar
+              </Button>
+              <Button
+                mode="contained"
+                buttonColor="#71BF44"
+                textColor="#ffffff"
+                style={styles.confirmPrimaryButton}
+                onPress={handleConfirmDialog}
+              >
+                Si, continuar
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={createVisible}
@@ -1023,6 +1145,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
             >
               <Text style={styles.label}>Planta</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createPlantId}
                 onValueChange={(value) => {
                   setCreatePlantId(String(value));
@@ -1044,6 +1168,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
               <Text style={styles.label}>Hallazgo</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createMainTypeId}
                 onValueChange={(value) => {
                   setCreateMainTypeId(String(value));
@@ -1063,6 +1189,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
               <Text style={styles.label}>Tipo</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createSecondaryTypeId}
                 onValueChange={(value) =>
                   setCreateSecondaryTypeId(String(value))
@@ -1081,6 +1209,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
               <Text style={styles.label}>Zona</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createZoneId}
                 onValueChange={(value) => {
                   setCreateZoneId(String(value));
@@ -1100,6 +1230,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
               <Text style={styles.label}>Proceso</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createProcessId}
                 onValueChange={(value) => setCreateProcessId(String(value))}
                 style={styles.picker}
@@ -1116,6 +1248,8 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
 
               <Text style={styles.label}>Supervisor (opcional)</Text>
               <Picker
+                mode="dropdown"
+                dropdownIconColor="#4b5563"
                 selectedValue={createSupervisorId}
                 onValueChange={(value) => setCreateSupervisorId(String(value))}
                 style={styles.picker}
@@ -1134,23 +1268,41 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 mode="outlined"
                 label="Descripción"
                 value={createDescription}
-                onChangeText={setCreateDescription}
+                onChangeText={(value) => {
+                  setCreateDescription(value);
+                  if (createValidationMessage) {
+                    setCreateValidationMessage("");
+                  }
+                }}
                 multiline
               />
 
-              <View style={styles.actionsRow}>
-                <Button mode="outlined" onPress={() => pickImage(false)}>
+              <View style={styles.mediaActionsRow}>
+                <Button
+                  mode="contained"
+                  buttonColor="#1d4ed8"
+                  textColor="#ffffff"
+                  style={styles.mediaActionButton}
+                  onPress={() => pickImage(false)}
+                >
                   Galería
                 </Button>
-                <Button mode="outlined" onPress={() => pickImage(true)}>
+                <Button
+                  mode="contained"
+                  buttonColor="#1d4ed8"
+                  textColor="#ffffff"
+                  style={styles.mediaActionButton}
+                  onPress={() => pickImage(true)}
+                >
                   Cámara
                 </Button>
-                {!!createImageUri && (
-                  <Button mode="text" onPress={() => setCreateImageUri("")}>
-                    Quitar
-                  </Button>
-                )}
               </View>
+
+              {!!createImageUri && (
+                <Button mode="text" onPress={() => setCreateImageUri("")}>
+                  Quitar
+                </Button>
+              )}
 
               {!!createImageUri && (
                 <Image
@@ -1165,7 +1317,27 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 </Text>
               )}
 
+              {!!createValidationMessage && (
+                <Text variant="labelSmall" style={styles.validationErrorText}>
+                  {createValidationMessage}
+                </Text>
+              )}
+
               <View style={styles.modalActions}>
+                <Button
+                  mode="contained"
+                  buttonColor="#d32f2f"
+                  textColor="#ffffff"
+                  onPress={() =>
+                    confirmAction(
+                      "Descartar cambios",
+                      "Se perderan los datos capturados. Deseas cancelar?",
+                      closeCreate,
+                    )
+                  }
+                >
+                  Cancelar
+                </Button>
                 <Button
                   mode="contained"
                   onPress={saveEvidence}
@@ -1174,9 +1346,6 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 >
                   Guardar hallazgo
                 </Button>
-                <Pressable onPress={closeCreate}>
-                  <Text style={styles.closeText}>Cancelar</Text>
-                </Pressable>
               </View>
             </ScrollView>
           </View>
@@ -1226,23 +1395,41 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 mode="outlined"
                 label="Descripción de la solución"
                 value={closeDescriptionSolution}
-                onChangeText={setCloseDescriptionSolution}
+                onChangeText={(value) => {
+                  setCloseDescriptionSolution(value);
+                  if (closeValidationMessage) {
+                    setCloseValidationMessage("");
+                  }
+                }}
                 multiline
               />
 
-              <View style={styles.actionsRow}>
-                <Button mode="outlined" onPress={() => pickCloseImage(false)}>
+              <View style={styles.mediaActionsRow}>
+                <Button
+                  mode="contained"
+                  buttonColor="#1d4ed8"
+                  textColor="#ffffff"
+                  style={styles.mediaActionButton}
+                  onPress={() => pickCloseImage(false)}
+                >
                   Galería
                 </Button>
-                <Button mode="outlined" onPress={() => pickCloseImage(true)}>
+                <Button
+                  mode="contained"
+                  buttonColor="#1d4ed8"
+                  textColor="#ffffff"
+                  style={styles.mediaActionButton}
+                  onPress={() => pickCloseImage(true)}
+                >
                   Cámara
                 </Button>
-                {!!closeImageUri && (
-                  <Button mode="text" onPress={() => setCloseImageUri("")}>
-                    Quitar
-                  </Button>
-                )}
               </View>
+
+              {!!closeImageUri && (
+                <Button mode="text" onPress={() => setCloseImageUri("")}>
+                  Quitar
+                </Button>
+              )}
 
               {!!closeImageUri && (
                 <Image
@@ -1257,7 +1444,27 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 </Text>
               )}
 
+              {!!closeValidationMessage && (
+                <Text variant="labelSmall" style={styles.validationErrorText}>
+                  {closeValidationMessage}
+                </Text>
+              )}
+
               <View style={styles.modalActions}>
+                <Button
+                  mode="contained"
+                  buttonColor="#d32f2f"
+                  textColor="#ffffff"
+                  onPress={() =>
+                    confirmAction(
+                      "Descartar cierre",
+                      "Se perderan los datos de cierre capturados. Deseas cancelar?",
+                      closeCloseEvidence,
+                    )
+                  }
+                >
+                  Cancelar
+                </Button>
                 <Button
                   mode="contained"
                   onPress={saveCloseEvidence}
@@ -1266,9 +1473,6 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 >
                   Guardar cierre
                 </Button>
-                <Pressable onPress={closeCloseEvidence}>
-                  <Text style={styles.closeText}>Cancelar</Text>
-                </Pressable>
               </View>
             </ScrollView>
           </View>
@@ -1285,14 +1489,20 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
           <View
             style={[
               styles.modalCard,
+              styles.detailsModalCard,
               { paddingBottom: Math.max(10, insets.bottom + 6) },
             ]}
           >
             <View style={styles.rowBetween}>
-              <Text variant="titleMedium">Detalles del hallazgo</Text>
+              <Text variant="titleMedium" style={styles.detailsModalTitle}>
+                Detalles del hallazgo
+              </Text>
               <IconButton
                 icon="close"
-                onPress={() => setSelectedEvidence(null)}
+                onPress={() => {
+                  setSelectedEvidence(null);
+                  setCommentValidationMessage("");
+                }}
               />
             </View>
             <Divider />
@@ -1302,53 +1512,142 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                 keyExtractor={(item) => String(item.id)}
                 ListHeaderComponent={
                   <View style={styles.detailsBlock}>
-                    <Text>
-                      Planta: {selectedEvidence.manufacturingPlant.name}
-                    </Text>
-                    <Text>Grupo: {selectedEvidence.mainType.name}</Text>
-                    <Text>Tipo: {selectedEvidence.secondaryType.name}</Text>
-                    <Text>Zona: {selectedEvidence.zone.name}</Text>
-                    <Text>Creado por: {selectedEvidence.user.name}</Text>
-                    <Text>
-                      Tiempo abierto:{" "}
-                      {selectedEvidence.solutionDate
-                        ? durationToText(
-                            selectedEvidence.createdAt,
-                            selectedEvidence.solutionDate,
-                          )
-                        : "En proceso"}
-                    </Text>
-                    <Text style={styles.sectionTitle}>Descripción</Text>
-                    <Text>
-                      {selectedEvidence.description || "Sin descripción"}
-                    </Text>
+                    <View style={styles.detailsTopAccent} />
+
+                    <View style={styles.detailsMetaGrid}>
+                      <View style={styles.detailsMetaItem}>
+                        <Text style={styles.detailsMetaLabel}>Planta</Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.manufacturingPlant.name}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsMetaItem}>
+                        <Text style={styles.detailsMetaLabel}>Grupo</Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.mainType.name}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsMetaItemWide}>
+                        <Text style={styles.detailsMetaLabel}>Tipo</Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.secondaryType.name}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsMetaItem}>
+                        <Text style={styles.detailsMetaLabel}>Zona</Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.zone.name}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsMetaItem}>
+                        <Text style={styles.detailsMetaLabel}>Creado por</Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.user.name}
+                        </Text>
+                      </View>
+                      <View style={styles.detailsMetaItemWide}>
+                        <Text style={styles.detailsMetaLabel}>
+                          Tiempo abierto
+                        </Text>
+                        <Text style={styles.detailsMetaValue}>
+                          {selectedEvidence.solutionDate
+                            ? durationToText(
+                                selectedEvidence.createdAt,
+                                selectedEvidence.solutionDate,
+                              )
+                            : "En proceso"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailsDescriptionBlock}>
+                      <Text style={styles.sectionTitle}>Descripción</Text>
+                      <Text style={styles.detailsDescriptionText}>
+                        {selectedEvidence.description || "Sin descripción"}
+                      </Text>
+                    </View>
+
                     {!!selectedEvidence.descriptionSolution && (
-                      <>
+                      <View style={styles.detailsDescriptionBlock}>
                         <Text style={styles.sectionTitle}>Solución</Text>
-                        <Text>{selectedEvidence.descriptionSolution}</Text>
-                      </>
+                        <Text style={styles.detailsDescriptionText}>
+                          {selectedEvidence.descriptionSolution}
+                        </Text>
+                      </View>
                     )}
 
                     <View style={styles.imagesRow}>
                       {!!selectedEvidence.imgEvidence && (
-                        <Image
-                          source={{
-                            uri: EvidencesService.imageUrl(
-                              selectedEvidence.imgEvidence,
-                            ),
-                          }}
-                          style={styles.photo}
-                        />
+                        <View
+                          style={[
+                            styles.detailImageItem,
+                            selectedEvidence.imgSolution
+                              ? styles.detailImageItemHalf
+                              : styles.detailImageItemFull,
+                          ]}
+                        >
+                          <Text style={styles.detailImageLabel}>
+                            Imagen del hallazgo
+                          </Text>
+                          <Pressable
+                            onPress={() =>
+                              openImagePreview(
+                                EvidencesService.imageUrl(
+                                  selectedEvidence.imgEvidence!,
+                                ),
+                                "Imagen del hallazgo",
+                              )
+                            }
+                            style={styles.detailImagePressable}
+                          >
+                            <View style={styles.detailImageFrame}>
+                              <Image
+                                source={{
+                                  uri: EvidencesService.imageUrl(
+                                    selectedEvidence.imgEvidence,
+                                  ),
+                                }}
+                                style={styles.photo}
+                              />
+                            </View>
+                          </Pressable>
+                        </View>
                       )}
                       {!!selectedEvidence.imgSolution && (
-                        <Image
-                          source={{
-                            uri: EvidencesService.imageUrl(
-                              selectedEvidence.imgSolution,
-                            ),
-                          }}
-                          style={styles.photo}
-                        />
+                        <View
+                          style={[
+                            styles.detailImageItem,
+                            selectedEvidence.imgEvidence
+                              ? styles.detailImageItemHalf
+                              : styles.detailImageItemFull,
+                          ]}
+                        >
+                          <Text style={styles.detailImageLabel}>
+                            Imagen de la solucion
+                          </Text>
+                          <Pressable
+                            onPress={() =>
+                              openImagePreview(
+                                EvidencesService.imageUrl(
+                                  selectedEvidence.imgSolution!,
+                                ),
+                                "Imagen de la solucion",
+                              )
+                            }
+                            style={styles.detailImagePressable}
+                          >
+                            <View style={styles.detailImageFrame}>
+                              <Image
+                                source={{
+                                  uri: EvidencesService.imageUrl(
+                                    selectedEvidence.imgSolution,
+                                  ),
+                                }}
+                                style={styles.photo}
+                              />
+                            </View>
+                          </Pressable>
+                        </View>
                       )}
                     </View>
                     <Text style={styles.sectionTitle}>Comentarios</Text>
@@ -1358,12 +1657,19 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
                   <View style={styles.commentItem}>
                     <Text style={styles.commentAuthor}>{item.user.name}</Text>
                     <Text>{item.comment}</Text>
-                    <Text variant="labelSmall">
+                    <Text
+                      variant="labelSmall"
+                      style={styles.detailsCommentDate}
+                    >
                       {stringToDateWithTime(item.createdAt)}
                     </Text>
                   </View>
                 )}
-                ListEmptyComponent={<Text>Sin comentarios.</Text>}
+                ListEmptyComponent={
+                  <Text style={styles.detailsEmptyComments}>
+                    Sin comentarios.
+                  </Text>
+                }
               />
             )}
 
@@ -1371,9 +1677,30 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
               mode="outlined"
               label="Agregar comentario"
               value={newComment}
-              onChangeText={setNewComment}
+              onChangeText={(value) => {
+                setNewComment(value);
+                if (commentValidationMessage) {
+                  setCommentValidationMessage("");
+                }
+              }}
             />
+            {!!commentValidationMessage && (
+              <Text variant="labelSmall" style={styles.validationErrorText}>
+                {commentValidationMessage}
+              </Text>
+            )}
             <View style={styles.modalActions}>
+              <Button
+                mode="contained"
+                buttonColor="#d32f2f"
+                textColor="#ffffff"
+                onPress={() => {
+                  setSelectedEvidence(null);
+                  setCommentValidationMessage("");
+                }}
+              >
+                Cerrar
+              </Button>
               <Button
                 mode="contained"
                 onPress={handleAddComment}
@@ -1382,12 +1709,41 @@ export const HallazgosScreen = ({ onLogout }: Props) => {
               >
                 Guardar comentario
               </Button>
-              <Pressable onPress={() => setSelectedEvidence(null)}>
-                <Text style={styles.closeText}>Cerrar</Text>
-              </Pressable>
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        visible={imagePreviewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeImagePreview}
+      >
+        <Pressable
+          style={styles.imagePreviewBackdrop}
+          onPress={closeImagePreview}
+        >
+          <Pressable style={styles.imagePreviewCard} onPress={() => null}>
+            <View style={styles.imagePreviewHeader}>
+              <Text style={styles.imagePreviewLabel}>{imagePreviewLabel}</Text>
+              <IconButton
+                icon="close"
+                size={20}
+                iconColor="#d1fae5"
+                onPress={closeImagePreview}
+                style={styles.imagePreviewCloseButton}
+              />
+            </View>
+            {!!imagePreviewUri && (
+              <Image
+                source={{ uri: imagePreviewUri }}
+                style={styles.imagePreviewImage}
+                resizeMode="contain"
+              />
+            )}
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -1412,24 +1768,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: "#fbfef9",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#e7ebf0",
+    borderColor: "#dbe9d1",
+  },
+  headerAccent: {
+    width: 4,
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#71BF44",
+    marginRight: 10,
+  },
+  headerTextWrap: {
+    flex: 1,
   },
   title: {
     fontWeight: "700",
     color: "#2f6d21",
   },
   headerSubtitle: {
-    color: "#5f6368",
+    color: "#4f5f4f",
   },
   actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  mediaActionsRow: {
+    marginBottom: 10,
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  mediaActionButton: {
+    flex: 1,
   },
   headerActionsRow: {
     flexDirection: "row",
@@ -1547,6 +1922,9 @@ const styles = StyleSheet.create({
   },
   picker: {
     marginTop: -6,
+    color: "#1f2937",
+    backgroundColor: "#ffffff",
+    height: Platform.OS === "android" ? 50 : undefined,
   },
   loadingRows: {
     marginVertical: 16,
@@ -1555,10 +1933,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e7ebf0",
-    backgroundColor: "#ffffff",
+    borderColor: "#dbe9d1",
+    backgroundColor: "#fbfef9",
+  },
+  cardContent: {
+    gap: 4,
+  },
+  cardTopAccent: {
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#71BF44",
+    marginBottom: 6,
+  },
+  cardIdText: {
+    color: "#2f6d21",
+    fontWeight: "700",
   },
   rowBetween: {
     flexDirection: "row",
@@ -1575,22 +1966,51 @@ const styles = StyleSheet.create({
   metaItem: {
     width: "48%",
   },
+  metaItemWide: {
+    width: "100%",
+  },
   metaLabel: {
-    fontSize: 11,
-    color: "#6b7280",
+    fontSize: 12,
+    color: "#4b8f2e",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    fontWeight: "700",
   },
   metaValue: {
     fontSize: 13,
-    color: "#1f2937",
-    fontWeight: "600",
+    color: "#6b7280",
+    fontWeight: "400",
+  },
+  metaValueStrong: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "400",
+    lineHeight: 18,
+  },
+  descriptionBlock: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e4efdd",
+    gap: 2,
+  },
+  descriptionValue: {
+    color: "#6b7280",
+    fontSize: 14,
+    lineHeight: 20,
   },
   cardActions: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  cardActionButton: {
+    flex: 1,
+    minWidth: 140,
+  },
+  cardActionButtonFull: {
+    width: "100%",
   },
   empty: {
     textAlign: "center",
@@ -1612,6 +2032,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 12,
   },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  confirmCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#dbe9d1",
+    padding: 14,
+    gap: 10,
+  },
+  confirmTitle: {
+    color: "#1f2937",
+    fontWeight: "700",
+  },
+  confirmMessage: {
+    color: "#4b5563",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  confirmActions: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  confirmPrimaryButton: {
+    minWidth: 140,
+  },
   modalCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -1627,41 +2079,169 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailsBlock: {
-    gap: 4,
+    gap: 8,
     paddingVertical: 8,
+  },
+  detailsModalCard: {
+    borderWidth: 1,
+    borderColor: "#dbe9d1",
+    backgroundColor: "#fbfef9",
+    borderRadius: 14,
+  },
+  detailsModalTitle: {
+    color: "#2f6d21",
+    fontWeight: "700",
+  },
+  detailsTopAccent: {
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#71BF44",
+  },
+  detailsMetaGrid: {
+    marginTop: 2,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 10,
+    rowGap: 8,
+  },
+  detailsMetaItem: {
+    width: "48%",
+  },
+  detailsMetaItemWide: {
+    width: "100%",
+  },
+  detailsMetaLabel: {
+    fontSize: 11,
+    color: "#4b8f2e",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    fontWeight: "700",
+  },
+  detailsMetaValue: {
+    color: "#4b5563",
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  detailsDescriptionBlock: {
+    borderTopWidth: 1,
+    borderTopColor: "#e4efdd",
+    paddingTop: 8,
+    gap: 2,
+  },
+  detailsDescriptionText: {
+    color: "#4b5563",
+    fontSize: 16,
+    lineHeight: 22,
   },
   sectionTitle: {
     marginTop: 8,
     fontWeight: "700",
+    color: "#2f6d21",
   },
   imagesRow: {
     marginTop: 8,
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
   },
+  detailImageItem: {
+    gap: 6,
+  },
+  detailImageItemHalf: {
+    width: "48%",
+  },
+  detailImageItemFull: {
+    width: "100%",
+  },
+  detailImageLabel: {
+    color: "#4b8f2e",
+    fontWeight: "700",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  detailImagePressable: {
+    width: "100%",
+  },
+  detailImageFrame: {
+    borderWidth: 1,
+    borderColor: "#dbe9d1",
+    borderRadius: 10,
+    padding: 2,
+    backgroundColor: "#ffffff",
+  },
   photo: {
-    width: 130,
-    height: 130,
+    width: "100%",
+    aspectRatio: 1,
     borderRadius: 8,
     backgroundColor: "#eef1f5",
   },
+  imagePreviewBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 14,
+  },
+  imagePreviewCard: {
+    width: "96%",
+    maxHeight: "88%",
+    backgroundColor: "#0f172a",
+    borderWidth: 1,
+    borderColor: "#71BF44",
+    borderRadius: 14,
+    padding: 10,
+    gap: 8,
+  },
+  imagePreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  imagePreviewLabel: {
+    color: "#d1fae5",
+    fontWeight: "700",
+    flex: 1,
+    fontSize: 15,
+  },
+  imagePreviewCloseButton: {
+    margin: 0,
+  },
+  imagePreviewImage: {
+    width: "100%",
+    height: "92%",
+    borderRadius: 10,
+    backgroundColor: "#111827",
+  },
   commentItem: {
     paddingVertical: 8,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eceff3",
+    borderBottomColor: "#e4efdd",
+    borderLeftWidth: 3,
+    borderLeftColor: "#71BF44",
+    backgroundColor: "#f7faf5",
+    borderRadius: 8,
     gap: 2,
   },
   commentAuthor: {
     fontWeight: "700",
+    color: "#2f6d21",
+  },
+  detailsCommentDate: {
+    color: "#6b7280",
+  },
+  detailsEmptyComments: {
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 8,
   },
   modalActions: {
     marginTop: 4,
-    gap: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-  },
-  closeText: {
-    color: "#4b8f2e",
-    fontWeight: "600",
   },
   photoPreview: {
     width: "100%",
@@ -1671,5 +2251,12 @@ const styles = StyleSheet.create({
   },
   photoHint: {
     color: "#d32f2f",
+  },
+  validationErrorText: {
+    color: "#d32f2f",
+    fontWeight: "600",
+    marginTop: 4,
+    textAlign: "center",
+    fontSize: 16,
   },
 });
